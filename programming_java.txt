@@ -1,0 +1,58 @@
+// Refactoring proposition
+
+package net.courtanet.tripservice;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class TripService {
+
+    // Method to be tested
+    public List<Trip> getTripsByUser(User user) throws UserNotLoggedInException {
+        List<Trip> tripList = new ArrayList<>();
+        User loggedUser = new UserSession().getInstance().getLoggedUser();
+        if (loggedUser !=null && findLoggedUser(loggedUser, user.getFriends())!=null){
+             tripList = TripDAO.findTripsByUser(user);
+           }
+
+            return tripList;
+        } else {
+            throw new UserNotLoggedInException();
+        }
+    }
+	
+	//method to find if loggedUser exists in users list
+	
+	public user findLoggedUser(User loggedUser, List<User> users){
+         return   users.stream().filter(user -> loggedUser.equals(user))
+                                                     .findAny()
+                                                     .orElse(null);
+}
+
+}
+
+// JUnit Test
+
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+
+public class TestJunitTripsByUser {
+
+   List<Trip> trips = new ArrayList<>();
+
+   trips.add(new Trip("trip 2"));
+   trips.add(new Trip("trip 3"));
+    
+
+   User user = new User();
+   user.addTrip(new Trip("trip 1");
+   user.addTrip(new Trip("trip 2");
+
+   user.addFriend(new User());
+
+   assertEquals(trips, getTripsByUser(user));
+   assertTrue(trips.equals(getTripsByUser(user)));
+
+}
+
+
