@@ -1,0 +1,228 @@
+1-
+a)SELECT * from measurements WHERE ref_sensor_id=1 AND m_date='2021-12-01' ORDER BY m_timestamp;
+
+b) we can speed up the precedent request by creating an index on ref_sensor_id field 
+
+    ALTER TABLE measurements ADD INDEX sensor_id_index (ref_sensor_id);
+
+2- with mongodb 
+
+ * create database sensorsnetworkdb
+   use sensorsnetworkdb
+   
+ * Documents models : network, sensor and measurements
+ 
+ 
+  {
+  
+   { name: "n1", 
+     description: "desc 1", 
+     region: "region n1", 
+     sensors : [
+              {
+			    {
+				 _id: "1", 
+				 location: "n1", 
+				 characteristics: "region n1",
+				 measurements : [
+				 
+				         {
+						   m_date: "2021-12-01",
+						   m_timestamp: "2021-12-01  00:00:01", 
+						   m_parameter: "p1", 
+						   m_value: "v1", 
+						 },
+						 
+						 {
+						   m_date: "2021-12-01",
+						   m_timestamp: "2021-12-01  00:00:01", 
+						   m_parameter: "p2", 
+						   m_value: "v2", 
+						 },
+						 
+						 {
+						   m_date: "2021-12-01",
+						   m_timestamp: "2021-12-01  00:00:01", 
+						   m_parameter: "p3", 
+						   m_value: "v3", 
+						 },
+				 
+				 ]
+				 
+				 
+				},
+				{
+				 _id: "2", 
+				 location: "n2", 
+				 characteristics: "region n2",
+				 measurements : [
+				 
+				         {
+						   m_date: "2022-12-01",
+						   m_timestamp: "2021-12-01  00:00:01", 
+						   m_parameter: "p1", 
+						   m_value: "v1", 
+						 },
+						 
+						 {
+						   m_date: "2022-12-01",
+						   m_timestamp: "2022-12-01  00:00:01", 
+						   m_parameter: "p2", 
+						   m_value: "v2", 
+						 },
+						 
+						 {
+						   m_date: "2022-12-01",
+						   m_timestamp: "2022-12-01  00:00:01", 
+						   m_parameter: "p3", 
+						   m_value: "v3", 
+						 },
+				 
+				 ]
+				 
+				 
+				},
+				
+				
+				
+	
+			  }
+   
+   
+   },
+   
+ { name: "n2", 
+     description: "desc 2", 
+     region: "region n2", 
+     sensors : [
+              {
+			    {
+				 _id: "1", 
+				 location: "n1", 
+				 characteristics: "region n1",
+				 measurements : [
+				 
+				         {
+						   m_date: "2021-12-01",
+						   m_timestamp: "2021-12-01  00:00:01", 
+						   m_parameter: "p1", 
+						   m_value: "v1", 
+						 },
+						 
+						 {
+						   m_date: "2021-12-01",
+						   m_timestamp: "2021-12-01  00:00:01", 
+						   m_parameter: "p2", 
+						   m_value: "v2", 
+						 },
+						 
+						 {
+						   m_date: "2021-12-01",
+						   m_timestamp: "2021-12-01  00:00:01", 
+						   m_parameter: "p3", 
+						   m_value: "v3", 
+						 },
+				 
+				 ]
+				 
+				 
+				},
+				{
+				 _id: "2", 
+				 location: "n2", 
+				 characteristics: "region n2",
+				 measurements : [
+				 
+				         {
+						   m_date: "2022-12-01",
+						   m_timestamp: "2021-12-01  00:00:01", 
+						   m_parameter: "p1", 
+						   m_value: "v1", 
+						 },
+						 
+						 {
+						   m_date: "2022-12-01",
+						   m_timestamp: "2022-12-01  00:00:01", 
+						   m_parameter: "p2", 
+						   m_value: "v2", 
+						 },
+						 
+						 {
+						   m_date: "2022-12-01",
+						   m_timestamp: "2022-12-01  00:00:01", 
+						   m_parameter: "p3", 
+						   m_value: "v3", 
+						 },
+				 
+				 ]
+				 
+				 
+				},
+				
+				
+				
+	
+			  }
+   
+   
+   },
+   
+  }
+ 
+4) The cause of java.io.NotSerializableException is that the code try to serialize an object that is not serializable
+   Make the class which frow the exception implement the serialization interface
+   
+
+5) Terraform snippets explanation
+//create dataset finance_dataset fields dataset_id  = "finance" and location = local.configuration.region and  description = "Finance Dataset"
+  resource "google_bigquery_dataset" "finance_dataset" {
+  description = "Finance Dataset"
+  dataset_id  = "finance"
+  location    = local.configuration.region
+}
+
+ //add configuration to "finance_dataset" which name is finance_dataset_iam_binding and compute count field by putting in it 1 if var.environment = "prod" or 0 if not, 
+add role "roles/bigquery.dataViewer" and members local.devs_data_admin_group.group_name who can use the dataset
+ 
+ resource "google_bigquery_dataset_iam_binding" "finance_dataset_iam_binding" {
+  count      = var.environment == "prod" ? 1 : 0
+  dataset_id = google_bigquery_dataset.finance_dataset.dataset_id
+  role       = "roles/bigquery.dataViewer"
+  members = [
+    local.devs_data_admin_group.group_name
+	
+  ]
+}
+
+// add table finance_events_pii to google_bigquery_dataset.finance_dataset, set table_id on "events_pii", avoid the deletion by putting
+deletion_protection = true and configure time partionning mode
+
+resource "google_bigquery_table" "finance_events_pii" {
+  dataset_id = google_bigquery_dataset.finance_dataset.dataset_id
+  table_id   = "events_pii"
+  deletion_protection = true
+
+  time_partitioning {
+    field         = "creation_datetime"
+    type          = "DAY"
+    expiration_ms = 126227704000
+  }
+  
+  
+
+6) 
+SELECT * FROM finance.events_pii
+ORDER BY event_id DESC
+LIMIT 1000
+
+This request select the first 1000 row of table events_pii sorted by event_id field in descending order
+
+
+
+
+
+  
+ 
+
+
+
